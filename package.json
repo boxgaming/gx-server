@@ -2,8 +2,26 @@
   "name": "gx_game_server",
   "version": "0.0.1",
   "private": true,
-  "dependencies": {},
   "scripts": {
     "start": "node server.js"
+  },
+  "description": "",
+  "main": "server.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/boxgaming/gx-server.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/boxgaming/gx-server/issues"
+  },
+  "homepage": "https://github.com/boxgaming/gx-server#readme",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.922.0",
+    "dotenv": "^17.2.3",
+    "fs": "^0.0.1-security",
+    "ws": "^8.18.3"
   }
 }

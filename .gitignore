@@ -1,0 +1,6 @@
+.env
+package-lock.json
+deleteme/*
+node_modules/*
+samples/*
+ws-client/*
