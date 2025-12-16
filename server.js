@@ -39,14 +39,7 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'text/plain');
 
 
-    /*if (req.method == "OPTIONS") {
-        if (board && board.restrictOrigin) {
-            res.setHeader("Access-Control-Allow-Origin", board.restrictOrigin);
-            res.setHeader("Access-Control-Allow-Headers", "Content-Type,X-GID,X-Restrict-To")
-        }
-        res.end();
-    }
-    else*/ if (req.url.startsWith("/v0/gxs.bas")) {
+    if (req.url.startsWith("/v0/gxs.bas")) {
         if (!checkOrigin(req, res)) { return; };
 
         fs.readFile("gxs-client-v0.bas", function (error, content) {
@@ -107,17 +100,9 @@ const server = http.createServer((req, res) => {
     }
 
     async function leaderboard(req, res) {
-        //console.log("leaderboard: " + req.url);
-        //console.log("method: " + req.method);
-        //console.log("headers");
-        //for (var h in req.headers) {
-        //    console.log(" -> " + h + ": " + req.headers[h]);
-        //}
         if (!checkOrigin(req, res)) { console.log("check origin failed"); return; }
 
         if (req.url.endsWith("/register")) {
-            //if (!checkOrigin(req, res)) { return; }
-
             let id = crypto.randomUUID();
             lb[id] = { scores: [] };
             lbmap[id] = {};
@@ -125,7 +110,6 @@ const server = http.createServer((req, res) => {
             console.log("register: " + id);
         }
         else if (req.url.endsWith("/restrict")) {
-            //if (!checkOrigin(req, res)) { return; }
             let did = req.headers["x-did"];
             if (did != DEVID) {
                 res.end();
@@ -143,8 +127,6 @@ const server = http.createServer((req, res) => {
             res.end();
         }
         else if (req.method == "GET") {
-
-            //console.log("GET section ------------------------");
             let gid = req.headers["x-gid"];
             console.log("GET: " + gid);
             let board = lb[gid];
@@ -157,18 +139,15 @@ const server = http.createServer((req, res) => {
             }
         }
         else if (req.method == "POST") {
-            //console.log("POST section ------------------------");
             let gid = req.headers["x-gid"];
             console.log("POST: " + gid);
             let board = lb[gid];
-            //console.log("board:" + board)
             if (board) {
                 let body = [];
                 req.on("data", chunk => {
                     body += chunk;
                 })
                     .on('end', () => {
-                        //console.log("body:" + body);
                         try {
                             let s = JSON.parse(body);
                             var entry = lbmap[gid][s.name];
@@ -181,10 +160,9 @@ const server = http.createServer((req, res) => {
                             else {
                                 s.ts = Date.now();
                                 board.scores.push(s);
-                                lbmap[gid][s.name] = s;//entry.scores(idx);
+                                lbmap[gid][s.name] = s;
                             }
                             res.end("OK");
-                            //fs.writeFileSync("leaderboard.json", JSON.stringify(lb), "utf8");
                             s3Save(LB_FILE, JSON.stringify(lb));
                         }
                         catch (e) {
@@ -226,42 +204,20 @@ async function s3Load(filename) {
 }
 
 async function init() {
-    //console.log("TEST: " + process.env.TEST)
-    //console.log("AK: " + process.env.AWS_ACCESS_KEY_ID);
-    /*    
-            // Prepare S3 upload
-            const params = {
-                Bucket: process.env.S3_BUCKET,
-                Key: process.env.S3_ROOT + "test2.txt",
-                Body: "This is text content.",
-                ContentType: "text/plain"
-            };
-    
-            await s3.send(new PutObjectCommand(params));
-        
-            var response = await s3.send(new GetObjectCommand(params));
-            console.log(await response.Body.transformToString());
-            */
-    //await s3Save(LB_FILE, "{}");
-    //console.log("---------> " + await s3Load(LB_FILE));
     try {
-        //var lbtext = fs.readFileSync("leaderboard.json", "utf8");
         var lbtext = await s3Load(LB_FILE);
         lb = JSON.parse(lbtext);
         for (var key in lb) {
-            //console.log("k:" + key);
             lbmap[key] = {};
             var board = lb[key];
             var scores = [];
             if (board.scores == undefined) {
                 lb[key] = { "scores": board };
-                //console.log(lb[key]);
                 scores = lb[key].scores;
             }
             else {
                 scores = board.scores;
             }
-            //console.log("board.restrictOrigin: " + board.restrictOrigin);
             if (board.restrictOrigin) {
                 allowedOrigins[board.restrictOrigin] = true;
                 console.log("Adding origin: " + board.restrictOrigin);
@@ -284,7 +240,6 @@ server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 });
 
-//var clients = [];
 const HOST = 1;
 const CLIENT = 2;
 const MSG_HOST_GAME = 1;
@@ -296,81 +251,84 @@ var sessions = {};
 const wss = new WebSocketServer({ server });
 wss.on("connection", function connection(ws) {
 
-  //clients.push(ws);
-  ws.on("message", function message(data) {
-    var msg = JSON.parse(data);
-    if (msg.type == MSG_HOST_GAME) {
-        var sid = crypto.randomUUID();
-        var cid = crypto.randomUUID();
-        ws.ctype = HOST;
-        ws.sid = sid;
-        ws.cid = cid;
-        sessions[sid] = { host: ws, clients: { } };
-        sessions[sid].clients[cid] = ws;
-        msg.sid = sid;
-        msg.cid = cid;
-        ws.send(JSON.stringify(msg));
-    }
-    else if (msg.type == MSG_JOIN_GAME) {
-        var session = sessions[msg.sid];
-        if (!session) {
-            console.log("Session not found: " + msg.sid);
-            return;
+    ws.on("message", function message(data) {
+        var msg = JSON.parse(data);
+        if (msg.type == MSG_HOST_GAME) {
+            var sid = crypto.randomUUID();
+            var cid = crypto.randomUUID();
+            ws.ctype = HOST;
+            ws.sid = sid;
+            ws.cid = cid;
+            sessions[sid] = { host: ws, clients: { } };
+            sessions[sid].clients[cid] = ws;
+            msg.sid = sid;
+            msg.cid = cid;
+            ws.send(JSON.stringify(msg));
+            console.log("New game started: " + sid);
         }
-        var cid = crypto.randomUUID();
-        ws.ctype = CLIENT;
-        ws.cid = cid;
-        ws.sid = msg.sid;
-        session.clients[cid] = ws;
-        msg.cid = cid;
-        ws.send(JSON.stringify(msg));
-        session.host.send(JSON.stringify(msg));
-        console.log(JSON.stringify(session.clients));
-    }
-    else {
-        var session = sessions[msg.sid];
-        if (!session) {
-            console.log("Session not found: " + msg.sid);
-            return;
-        }
-        if (msg.to == "HOST") {
+        else if (msg.type == MSG_JOIN_GAME) {
+            var session = sessions[msg.sid];
+            if (!session) {
+                console.log("Session not found: " + msg.sid);
+                return;
+            }
+            var cid = crypto.randomUUID();
+            ws.ctype = CLIENT;
+            ws.cid = cid;
+            ws.sid = msg.sid;
+            session.clients[cid] = ws;
+            msg.cid = cid;
+            ws.send(JSON.stringify(msg));
             session.host.send(JSON.stringify(msg));
+            console.log(JSON.stringify(session.clients));
         }
         else {
-            for (var cid in session.clients) {
-                //console.log(cid);
-                if (!msg.to || msg.to == "" || msg.to == cid) {
-                    session.clients[cid].send(JSON.stringify(msg));
+            var session = sessions[msg.sid];
+            if (!session) {
+                console.log("Session not found: " + msg.sid);
+                return;
+            }
+            if (msg.to == "HOST") {
+                session.host.send(JSON.stringify(msg));
+            }
+            else {
+                for (var cid in session.clients) {
+                    if (!msg.to || msg.to == "" || msg.to == cid) {
+                        session.clients[cid].send(JSON.stringify(msg));
+                    }
                 }
             }
         }
-    }
-    //console.log(msg.type);
-  });
-  ws.on('close', () => {
-    console.log('Client disconnected');
-    console.log(ws.sid);
-    var session = sessions[ws.sid];
-    //console.log(session);
-    if (session) {
-        var msg = {
-            type: MSG_CLIENT_DISCONNECTED,
-            sid: ws.sid,
-            cid: ws.cid
+    });
+    ws.on('close', () => {
+        console.log('Client disconnected');
+        console.log(ws.sid);
+        var session = sessions[ws.sid];
+        if (session) {
+            var msg = {
+                type: MSG_CLIENT_DISCONNECTED,
+                sid: ws.sid,
+                cid: ws.cid
+            }
+            if (ws == session.host) { msg.type = MSG_HOST_DISCONNECTED }
+            delete session.clients[ws.cid];
+            if (Object.keys(session.clients).length < 1) {
+                console.log("All clients disconnected, removing session: " + ws.sid);
+                delete session[ws.sid];
+            }
+            else {
+                if (msg.type == MSG_HOST_DISCONNECTED) {
+                    // promote the next available client to be the host
+                    msg.hid = Object.keys(session.clients)[0];
+                    session.host = session.clients[msg.hid];
+                    session.host.ctype = HOST;
+                }
+                for (var cid in session.clients) {
+                    console.log(JSON.stringify(msg));
+                    session.clients[cid].send(JSON.stringify(msg));
+                }    
+            }
         }
-        if (ws == session.host) { msg.type = MSG_HOST_DISCONNECTED }
-        delete session.clients[ws.cid];
-        var ccount = 0;
-        for (var cid in session.clients) {
-            console.log(JSON.stringify(msg));
-            session.clients[cid].send(JSON.stringify(msg));
-            ccount++;
-        }
-        if (ccount < 1) {
-            console.log("All clients disconnected, removing session");
-            delete session[ws.sid];
-        }
-    }
-  });
+    });
 });
 

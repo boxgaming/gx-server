@@ -1,22 +1,22 @@
 Option Explicit
 
-Const MSG_HOST_GAME = 1
-Const MSG_JOIN_GAME = 2
+Const MSG_HOST_GAME = 1, HOST = 1
+Const MSG_JOIN_GAME = 2, CLIENT = 2
 Const MSG_HOST_DISCONNECTED = 3
 Const MSG_CLIENT_DISCONNECTED = 4
 Const MSG_ERROR = 5
 Const MSG_CLOSE = 6
-'Const GXS_WS_URL = "ws://localhost:8080/"
-'Const GXS_URL = "http://localhost:8080/v0"
-Const GXS_WS_URL = "wss://gxapi.boxgaming.co/"
-Const GXS_URL = "https://gxapi.boxgaming.co/v0"
+Const GXS_WS_URL = "ws://localhost:8080/"
+Const GXS_URL = "http://localhost:8080/v0"
+'Const GXS_WS_URL = "wss://gxapi.boxgaming.co/"
+'Const GXS_URL = "https://gxapi.boxgaming.co/v0"
 Const LB_URL = GXS_URL + "/lb"
 
 ' library exports
 Export MSG_HOST_GAME As HOST_GAME, MSG_JOIN_GAME As JOIN_GAME
 Export MSG_CLIENT_DISCONNECTED As CLIENT_DISCONNECTED, MSG_HOST_DISCONNECTED As HOST_DISCONNECTED
 Export MSG_ERROR As ERROR, MSG_CLOSE As CLOSE
-Export HostGame, JoinGame, SendMessage, SendHostMessage, RegisterEvent, IsHost, SessionId, ClientId
+Export HostGame, JoinGame, LeaveGame, SendMessage, SendHostMessage, RegisterEvent, IsHost, SessionId, ClientId
 Export LBGet As LeaderboardGet, LBAdd As LeaderboardUpdate, LBCreate As LeaderboardCreate, LBRestrict As LeaderboardRestrict
 
 Dim Shared websocket As Object
@@ -74,8 +74,16 @@ Sub OnMessage (msg As Object)
     If msg.type = MSG_HOST_GAME Then
         sid = msg.sid
         cid = msg.cid
+
     ElseIf msg.type = MSG_JOIN_GAME Then
         If mode <> MSG_HOST_GAME Then cid = msg.cid
+
+    ElseIf msg.type = MSG_HOST_DISCONNECTED Then
+        If cid = msg.hid Then
+            mode = HOST
+        Else
+            mode = CLIENT
+        End If
     End If
     If eventMap(msg.type) Then
         Dim callback As Sub
@@ -87,6 +95,12 @@ End Sub
 Sub Send (msg As Object)
 $If Javascript Then
     websocket.send(JSON.stringify(msg));
+$End If
+End Sub
+
+Sub LeaveGame (code, reason)
+$If Javascript Then
+    websocket.close(code, reason);
 $End If
 End Sub
 
@@ -115,7 +129,7 @@ Sub RegisterEvent (etype As Integer, callback As Sub)
 End Sub
 
 Function IsHost
-    If mode = MSG_HOST_GAME Then
+    If mode = HOST Then
         IsHost = -1
     Else
         IsHost = 0
