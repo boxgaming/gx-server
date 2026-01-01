@@ -6,25 +6,28 @@ Const MSG_HOST_DISCONNECTED = 3
 Const MSG_CLIENT_DISCONNECTED = 4
 Const MSG_ERROR = 5
 Const MSG_CLOSE = 6
-Const GXS_WS_URL = "ws://localhost:8080/"
-Const GXS_URL = "http://localhost:8080/v0"
-'Const GXS_WS_URL = "wss://gxapi.boxgaming.co/"
-'Const GXS_URL = "https://gxapi.boxgaming.co/v0"
+'Const GXS_WS_URL = "ws://localhost:8080/"
+'Const GXS_URL = "http://localhost:8080/v0"
+Const GXS_WS_URL = "wss://gxapi.boxgaming.co/"
+Const GXS_URL = "https://gxapi.boxgaming.co/v0"
 Const LB_URL = GXS_URL + "/lb"
+Const GS_URL = GXS_URL + "/gs"
 
 ' library exports
 Export MSG_HOST_GAME As HOST_GAME, MSG_JOIN_GAME As JOIN_GAME
 Export MSG_CLIENT_DISCONNECTED As CLIENT_DISCONNECTED, MSG_HOST_DISCONNECTED As HOST_DISCONNECTED
 Export MSG_ERROR As ERROR, MSG_CLOSE As CLOSE
-Export HostGame, JoinGame, LeaveGame, SendMessage, SendHostMessage, RegisterEvent, IsHost, SessionId, ClientId
+Export HostGame, JoinGame, LeaveGame, SendMessage, SendHostMessage, RegisterEvent, IsHost, SessionId, ClientId, FindGames
 Export LBGet As LeaderboardGet, LBAdd As LeaderboardUpdate, LBCreate As LeaderboardCreate, LBRestrict As LeaderboardRestrict
 
 Dim Shared websocket As Object
-Dim Shared As String sid, cid
+Dim Shared As String sid, cid, gname, gdesc
 Dim Shared As Integer mode
 Dim Shared eventMap()
 
-Sub HostGame
+Sub HostGame (gameName As String, gameDesc As String)
+    gname = gameName
+    gdesc = gameDesc
     Connect MSG_HOST_GAME
 End Sub
 
@@ -51,6 +54,8 @@ Sub OnOpen
     Dim msg As Object
     msg.type = mode
     msg.sid = sid
+    msg.gname = gname
+    msg.gdesc = gdesc
     Send msg
 End Sub
 
@@ -144,6 +149,33 @@ Function ClientId
     ClientId = cid
 End Function
 
+Sub FindGames (gameName As String, results() As Object)
+    Dim As Object r, scores, s
+    Dim As Integer i
+$If Javascript Then
+    r = await fetch(GS_URL + "/list", {
+        method: "GET",
+        headers: { 
+            "Content-Type": "application/json",
+            "X-GSNAME": gameName
+        }});
+    if (r.status == 200) {
+        sessions = await r.json();
+$End If
+        ReDim results(sessions.length) As Object
+$If Javascript Then
+        for (i=0; i < sessions.length; i++) {
+            s = sessions[i];
+            var d = new Date(s.startTime);
+            s.sdate = d.toLocaleDateString();
+            s.stime = d.toLocaleTimeString();
+ $End If
+            results(i+1) = s
+$If Javascript Then
+        }
+    }    
+$End If
+End Sub
 
 ' -------------------------------------------------------------------------
 ' Leaderboard methods
@@ -197,7 +229,7 @@ $If Javascript Then
     }    
 $End If
     LBGet = r.status
-End Sub
+End Function
 
 Function LBAdd (id As String, score As Integer, pname As String)
     Dim s As Object

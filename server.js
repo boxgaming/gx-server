@@ -28,13 +28,13 @@ allowedOrigins["https://boxgaming.github.io"] = 1;
 allowedOrigins["http://localhost:8080"] = 1;
 
 const server = http.createServer((req, res) => {
-    console.log("URL: " + req.url);
+    /*console.log("URL: " + req.url);
     console.log("Method: " + req.method);
     console.log("Headers:");
     for (var h in req.headers) {
         console.log("    -> " + h + ": " + req.headers[h]);
     }
-    console.log("-------------------------------------------------------");
+    console.log("-------------------------------------------------------");*/
     res.statusCode = 200;
     res.setHeader('Content-Type', 'text/plain');
 
@@ -52,6 +52,9 @@ const server = http.createServer((req, res) => {
             }
         });
     }
+    else if (req.url.startsWith("/v0/gs")) {
+        gamesession(req, res);
+    }
     else if (req.url.startsWith("/v0/lb")) {
         leaderboard(req, res);
     }
@@ -68,7 +71,7 @@ const server = http.createServer((req, res) => {
         if (req.method == "OPTIONS") {
             if (allowedOrigins[origin]) {
                 res.setHeader("Access-Control-Allow-Origin", origin);
-                res.setHeader("Access-Control-Allow-Headers", "Content-Type,X-GID,X-Restrict-To,X-DID");
+                res.setHeader("Access-Control-Allow-Headers", "Content-Type,X-GID,X-Restrict-To,X-DID,X-GSNAME");
             }
             res.end();
             return false;
@@ -88,7 +91,7 @@ const server = http.createServer((req, res) => {
         }
         else if (origin == "https://boxgaming.github.io" || origin == "https://qbjs.org" || origin == "http://localhost:8080") {
             res.setHeader("Access-Control-Allow-Origin", origin);
-            res.setHeader("Access-Control-Allow-Headers", "Content-Type,X-GID,X-Restrict-To,X-DID");
+            res.setHeader("Access-Control-Allow-Headers", "Content-Type,X-GID,X-GSNAME,X-Restrict-To,X-DID");
         }
         else {
             res.statusCode = 200;
@@ -97,6 +100,34 @@ const server = http.createServer((req, res) => {
         }
 
         return true;
+    }
+
+    function gamesession(req, res) {
+        if (!checkOrigin(req, res)) { console.log("check origin failed"); return; }
+
+        if (req.url.endsWith("/list")) {
+            let gname = req.headers["x-gsname"];
+            console.log("gname:[" + gname + "]");
+            let slist = [];
+            console.log("sessions.size: " + Object.keys(sessions).length);
+            for (var key in sessions) {
+                console.log(" --> key: [" + key + "]");
+                var session = sessions[key];
+                if (!gname || (gname && gname == session.gname)) {
+                    slist.push({
+                        name: session.gname,
+                        desc: session.gdesc,
+                        sid: key,
+                        clients: Object.keys(session.clients).length,
+                        startTime: session.startTime
+                    });
+                }
+            }
+            res.end(JSON.stringify(slist));
+        }
+        else {
+            res.end();
+        }
     }
 
     async function leaderboard(req, res) {
@@ -259,12 +290,14 @@ wss.on("connection", function connection(ws) {
             ws.ctype = HOST;
             ws.sid = sid;
             ws.cid = cid;
-            sessions[sid] = { host: ws, clients: { } };
+            sessions[sid] = { host: ws, clients: {}, gname: msg.gname, gdesc: msg.gdesc, startTime: Date.now() };
             sessions[sid].clients[cid] = ws;
             msg.sid = sid;
             msg.cid = cid;
             ws.send(JSON.stringify(msg));
             console.log("New game started: " + sid);
+            console.log("gname: " + sessions[sid].gname);
+            console.log("gdesc: " + sessions[sid].gdesc);
         }
         else if (msg.type == MSG_JOIN_GAME) {
             var session = sessions[msg.sid];
@@ -304,6 +337,7 @@ wss.on("connection", function connection(ws) {
         console.log('Client disconnected');
         console.log(ws.sid);
         var session = sessions[ws.sid];
+        var sid = ws.sid;``
         if (session) {
             var msg = {
                 type: MSG_CLIENT_DISCONNECTED,
@@ -314,7 +348,7 @@ wss.on("connection", function connection(ws) {
             delete session.clients[ws.cid];
             if (Object.keys(session.clients).length < 1) {
                 console.log("All clients disconnected, removing session: " + ws.sid);
-                delete session[ws.sid];
+                delete sessions[sid];
             }
             else {
                 if (msg.type == MSG_HOST_DISCONNECTED) {
