@@ -57,6 +57,7 @@ End Sub
 ' Called when a new game is started by the host
 Sub OnHostGame (msg As Object)
     Console.Echo "Game started with id: " + GXS.SessionId 
+    result = Dom.Prompt("Game started. Copy the id to share with other players:", GXS.SessionId)
     connecting = GX_FALSE
     AddPlayer GXS.ClientId
     Sys.SetTimeout @SendPlayerUpdates, 16
