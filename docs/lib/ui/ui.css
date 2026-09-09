@@ -1,0 +1,78 @@
+canvas:focus { outline: 0 }
+dialog, dialog button, dialog input, 
+#game-ui, #game-ui input, #game-ui button {
+    font-family: dosvga; font-size: 16px 
+}
+#game-ui.dock-right { 
+    border-left: 1px solid #999;
+    padding-left: 3px;
+}
+dialog input { width: 300px }
+#dlg-message-box, #dlg-start-game { max-width: 400px; }
+#dlg-message-box div, #dlg-start-game div { text-align: left; }
+#dlg-message-box div, .grp-panel { margin-bottom: 10px; }
+.btn-cancel { margin-left: 5px }
+
+.gl-head div, .gl-row div { padding: 2px }
+.gl-row { cursor: pointer; user-select: none }
+.gl-row:hover { background-color: rgba(255, 255, 255, .25) }
+.gl-head, .gl-row {
+    text-align: left;
+    display: grid;
+    grid-template-columns: 150px 175px 80px 200px;
+}
+.gl-head {
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+}
+.gl-cell-players {
+    text-align: center;
+    padding-right: 20px;
+}
+#game-list-panel {
+    min-height: 200px;
+    overflow-y: scroll;
+    border-bottom: 1px solid #000;
+    margin-bottom: 5px;
+}
+
+#chat-input-panel {
+    display: grid;
+    grid-template-columns: 42px auto 50px 22px;
+    padding-left: 2px;
+    padding-top: 3px;
+    padding-right: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #999;
+}
+#chat-input-panel span {
+    padding: 3px;
+}
+#chat-input-panel input {
+    border: 1px solid #999;
+    background-color: #000;
+    color: #ccc;
+    margin-left: 3px;
+    margin-right: 3px;
+}
+#chat-input-panel a {
+    display: block;
+    width: 20px;
+    height: 20px;
+    background-size: 22px 22px;
+    background-repeat: no-repeat;
+}
+#chat-input-panel a.dock-bottom {
+    background-image: url(img/console-show.svg);
+}
+#chat-input-panel a.dock-right {
+    background-image: url(img/slide-right.svg);
+}
+
+#log {
+    text-align: left;
+    margin-top: 5px;
+    padding: 5px;
+    overflow-y: auto;
+}
+.sender { color: #ccc; color: green }
